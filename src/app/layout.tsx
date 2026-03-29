@@ -1,25 +1,14 @@
 export const dynamic = "force-dynamic";
+
 import type { Metadata } from "next";
 import "./globals.css";
-import { Providers } from "@/components/layout/Providers";
+import Providers from "@/components/layout/Providers"; // ✅ FIXED
 
 export const metadata: Metadata = {
   title: "FluentAI – Real-Time English Speaking Coach",
   description:
-    "Build English speaking confidence with AI-powered real-time coaching, grammar correction, and personalized feedback.",
-  keywords: [
-    "english speaking",
-    "AI coach",
-    "fluency",
-    "grammar correction",
-    "language learning",
-  ],
-  openGraph: {
-    title: "FluentAI – Real-Time English Speaking Coach",
-    description:
-      "Build English speaking confidence with AI-powered real-time coaching.",
-    type: "website",
-  },
+    "Build English speaking confidence with AI-powered real-time coaching.",
+  metadataBase: new URL("https://fluentai-zeta.vercel.app"),
 };
 
 export default function RootLayout({

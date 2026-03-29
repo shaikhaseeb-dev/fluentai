@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { ProgressCharts } from "@/components/dashboard/ProgressCharts";
 import { RecentSessions } from "@/components/dashboard/RecentSessions";
@@ -55,7 +56,8 @@ async function getDashboardData(userId: string) {
 
 export default async function DashboardPage() {
   const session = await auth();
-  const data = await getDashboardData(session!.user!.id!);
+  if (!session?.user?.id) redirect("/auth/signin");
+  const data = await getDashboardData(session.user.id);
 
   const stats = [
     {

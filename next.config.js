@@ -2,11 +2,22 @@
 const nextConfig = {
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000"],
+      // FIX: added production domain — without this, server actions
+      // are blocked on Vercel with a 403 CSRF error
+      allowedOrigins: ["localhost:3000", "fluentai-zeta.vercel.app"],
     },
   },
   images: {
-    domains: ["lh3.googleusercontent.com", "avatars.githubusercontent.com"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "avatars.githubusercontent.com",
+      },
+    ],
   },
   eslint: {
     ignoreDuringBuilds: true,

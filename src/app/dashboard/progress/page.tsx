@@ -1,12 +1,15 @@
 export const dynamic = "force-dynamic";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 import { ProgressCharts } from "@/components/dashboard/ProgressCharts";
 import { subDays } from "date-fns";
 
 export default async function ProgressPage() {
   const session = await auth();
-  const userId = session!.user!.id!;
+  // FIX: was session!.user!.id! — crashes if session is null
+  if (!session?.user?.id) redirect("/auth/signin");
+  const userId = session.user.id;
 
   const sessions = await prisma.practiceSession.findMany({
     where: {
