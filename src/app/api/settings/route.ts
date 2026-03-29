@@ -1,9 +1,12 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 
 export async function PATCH(req: NextRequest) {
+  const { prisma } = require("@/lib/prisma");
+  const { auth } = require("@/lib/auth");
+
   const session = await auth();
   if (!session?.user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

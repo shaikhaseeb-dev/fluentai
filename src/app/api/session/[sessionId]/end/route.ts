@@ -1,8 +1,7 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { openai } from "@/lib/openai";
-import { auth } from "@/lib/auth";
 
 const MOCK_MODE = process.env.MOCK_MODE === "true";
 
@@ -21,6 +20,10 @@ export async function POST(
   { params }: { params: { sessionId: string } },
 ) {
   try {
+    const { prisma } = require("@/lib/prisma");
+    const { openai } = require("@/lib/openai");
+    const { auth } = require("@/lib/auth");
+
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

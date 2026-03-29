@@ -1,10 +1,13 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
+    const { prisma } = require("@/lib/prisma");
+    const { auth } = require("@/lib/auth");
+
     const session = await auth();
     if (!session?.user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,7 +24,7 @@ export async function POST(req: NextRequest) {
         select: { duration: true },
       });
       const totalToday = todaySessions.reduce(
-        (acc, s) => acc + (s.duration ?? 0),
+        (acc: number, s: any) => acc + (s.duration ?? 0),
         0,
       );
       if (totalToday >= 300) {

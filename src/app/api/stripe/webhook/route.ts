@@ -1,10 +1,13 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
-import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 
 export async function POST(req: NextRequest) {
+  const { stripe } = require("@/lib/stripe");
+  const { prisma } = require("@/lib/prisma");
+
   const body = await req.text();
   const sig = req.headers.get("stripe-signature")!;
 

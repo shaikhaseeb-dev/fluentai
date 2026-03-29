@@ -1,11 +1,9 @@
 export const dynamic = "force-dynamic";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const { openai } = require("@/lib/openai");
+
   const { sentence } = await req.json();
 
   const completion = await openai.chat.completions.create({

@@ -2,16 +2,12 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 
-// ❌ REMOVE direct prisma import here
-
-// ✅ Lazy adapter (CRITICAL FIX)
-let adapter: any = undefined;
-
-if (process.env.NODE_ENV !== "production") {
-  const { PrismaAdapter } = require("@auth/prisma-adapter");
-  const { prisma } = require("./prisma");
-  adapter = PrismaAdapter(prisma);
-}
+// ✅ Always load the adapter — lazy require avoids build-time Prisma execution.
+// BUG FIX: previous code skipped adapter in production (NODE_ENV !== "production"
+// is false in prod), meaning sessions were never persisted to the DB on Vercel.
+const { PrismaAdapter } = require("@auth/prisma-adapter");
+const { prisma } = require("./prisma");
+const adapter = PrismaAdapter(prisma);
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter,
@@ -32,7 +28,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email) return null;
 
-        // 🔥 Lazy prisma import here too
         const { prisma } = require("./prisma");
 
         const user = await prisma.user.findUnique({
