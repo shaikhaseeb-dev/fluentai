@@ -1,14 +1,19 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { subDays } from "date-fns";
 
 export async function GET(req: NextRequest) {
   try {
+    // 🔥 LAZY IMPORTS (CRITICAL FIX)
+    const { prisma } = require("@/lib/prisma");
+    const { auth } = require("@/lib/auth");
+
     const session = await auth();
-    if (!session?.user)
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const userId = session.user.id!;
     const thirtyDaysAgo = subDays(new Date(), 30);
@@ -30,22 +35,26 @@ export async function GET(req: NextRequest) {
           sentenceCount: true,
         },
       }),
+
       prisma.fillerEvent.findMany({
         where: {
-          session: { userId, startedAt: { gte: thirtyDaysAgo } },
+          session: {
+            userId,
+            startedAt: { gte: thirtyDaysAgo },
+          },
         },
         select: { word: true, count: true },
       }),
     ]);
 
-    // Aggregate filler totals by word
+    // 🧠 Aggregate filler totals
     const fillerTotals: Record<string, number> = {};
     for (const e of fillerEvents) {
       fillerTotals[e.word] = (fillerTotals[e.word] ?? 0) + e.count;
     }
 
-    const chartData = sessions.map((s) => ({
-      date: s.startedAt.toLocaleDateString("en-US", {
+    const chartData = sessions.map((s: any) => ({
+      date: new Date(s.startedAt).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       }),
@@ -54,10 +63,16 @@ export async function GET(req: NextRequest) {
       corrections: s.grammarCorrections,
     }));
 
-    return NextResponse.json({ chartData, fillerTotals });
+    return NextResponse.json({
+      success: true,
+      chartData,
+      fillerTotals,
+    });
   } catch (error) {
+    console.error("Dashboard API error:", error);
+
     return NextResponse.json(
-      { error: "Internal server error" },
+      { success: false, error: "Internal server error" },
       { status: 500 },
     );
   }
