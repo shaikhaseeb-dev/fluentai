@@ -2,19 +2,9 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 
-let adapter: any = undefined;
-
-if (process.env.NODE_ENV !== "production") {
-  // ✅ Use dynamic import (ESM safe)
-  const prismaModule = await import("@/lib/prisma");
-  const adapterModule = await import("@auth/prisma-adapter");
-
-  adapter = adapterModule.PrismaAdapter(prismaModule.prisma);
-}
+// ❌ NO Prisma adapter in production (avoids build crash)
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter,
-
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
