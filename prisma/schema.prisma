@@ -1,0 +1,229 @@
+// FluentAI - Prisma Schema
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── AUTH ───────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Subscription
+  plan          Plan      @default(FREE)
+  stripeCustomerId    String?   @unique
+  stripeSubscriptionId String?  @unique
+  stripePriceId  String?
+  stripeCurrentPeriodEnd DateTime?
+
+  // Settings
+  correctionMode CorrectionMode @default(LIGHT)
+  dailyGoalMinutes Int          @default(10)
+
+  // Relations
+  accounts       Account[]
+  sessions  Session[]
+  practiceSessions PracticeSession[]
+  improvements   ImprovementMemory[]
+  weeklyReports  WeeklyReport[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions_auth")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── PRACTICE SESSIONS ──────────────────────────
+
+model PracticeSession {
+  id        String   @id @default(cuid())
+  userId    String
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+  duration  Int?     // seconds
+
+  // Stats
+  sentenceCount       Int     @default(0)
+  grammarCorrections  Int     @default(0)
+  fillerCount         Int     @default(0)
+  avgPauseDuration    Float?  // seconds
+  confidenceScore     Float?  // 0-10
+  wordsSpoken         Int     @default(0)
+
+  // Summary
+  strengths            String[]
+  improvements         String[]
+  recommendedFocus     String?
+  summaryGenerated     Boolean @default(false)
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transcripts   Transcript[]
+  corrections   GrammarCorrection[]
+  fillerEvents  FillerEvent[]
+  stuckEvents   StuckWordEvent[]
+
+  @@map("practice_sessions")
+}
+
+model Transcript {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      Role     // USER or AI
+  content   String   @db.Text
+  timestamp DateTime @default(now())
+
+  session PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("transcripts")
+}
+
+model GrammarCorrection {
+  id          String   @id @default(cuid())
+  sessionId   String
+  original    String   @db.Text
+  corrected   String   @db.Text
+  explanation String   @db.Text
+  severity    Severity @default(MODERATE)
+  accepted    Boolean  @default(false)
+  timestamp   DateTime @default(now())
+
+  session PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("grammar_corrections")
+}
+
+model FillerEvent {
+  id        String   @id @default(cuid())
+  sessionId String
+  word      String   // "um", "uh", "like", etc.
+  count     Int      @default(1)
+  timestamp DateTime @default(now())
+
+  session PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("filler_events")
+}
+
+model StuckWordEvent {
+  id          String   @id @default(cuid())
+  sessionId   String
+  context     String   @db.Text  // sentence fragment before pause
+  suggestions String[]           // words suggested
+  accepted    String?            // which suggestion was accepted
+  timestamp   DateTime @default(now())
+
+  session PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("stuck_word_events")
+}
+
+// ─── IMPROVEMENT MEMORY ─────────────────────────
+
+model ImprovementMemory {
+  id          String   @id @default(cuid())
+  userId      String
+  word        String   // the word/phrase learned
+  context     String?  // sentence context where used
+  usageCount  Int      @default(1)
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, word])
+  @@map("improvement_memory")
+}
+
+// ─── WEEKLY REPORTS ─────────────────────────────
+
+model WeeklyReport {
+  id          String   @id @default(cuid())
+  userId      String
+  weekStart   DateTime
+  weekEnd     DateTime
+  totalTime   Int      // seconds
+  sessionCount Int
+  avgConfidence Float?
+  topFillers   Json?   // { word: count }
+  improvements String[]
+  sentAt      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("weekly_reports")
+}
+
+// ─── ENUMS ──────────────────────────────────────
+
+enum Plan {
+  FREE
+  PRO
+}
+
+enum CorrectionMode {
+  LIGHT    // major errors only
+  STRICT   // all detectable errors
+  FLUENCY  // no interruption, summary only
+}
+
+enum Role {
+  USER
+  AI
+}
+
+enum Severity {
+  MINOR
+  MODERATE
+  MAJOR
+}
