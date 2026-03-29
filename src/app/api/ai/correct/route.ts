@@ -1,7 +1,8 @@
+export const dynamic = "force-dynamic";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(req: Request) {
@@ -13,17 +14,17 @@ export async function POST(req: Request) {
       {
         role: "system",
         content:
-          "You are an English speaking coach. Detect grammar mistakes and return correction in JSON."
+          "You are an English speaking coach. Detect grammar mistakes and return correction in JSON.",
       },
       {
         role: "user",
-        content: sentence
-      }
+        content: sentence,
+      },
     ],
-    response_format: { type: "json_object" }
+    response_format: { type: "json_object" },
   });
 
   return Response.json(
-    JSON.parse(completion.choices[0].message.content || "{}")
+    JSON.parse(completion.choices[0].message.content || "{}"),
   );
 }
