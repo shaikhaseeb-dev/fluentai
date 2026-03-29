@@ -1,6 +1,7 @@
-import { redirect } from 'next/navigation';
-import { auth } from '@/lib/auth';
-import { Sidebar } from '@/components/layout/Sidebar';
+export const dynamic = "force-dynamic";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 export default async function DashboardLayout({
   children,
@@ -8,7 +9,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  if (!session?.user) redirect('/auth/signin');
+  if (!session?.user) redirect("/auth/signin");
 
   return (
     <div className="flex h-screen bg-surface-50 overflow-hidden">
