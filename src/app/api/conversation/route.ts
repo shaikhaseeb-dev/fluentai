@@ -1,8 +1,7 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
-import { openai } from "@/lib/openai";
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 
 const MOCK_MODE = process.env.MOCK_MODE === "true";
 
@@ -26,6 +25,11 @@ export async function POST(req: NextRequest) {
   const start = Date.now();
 
   try {
+    // 🔥 LAZY IMPORTS (CRITICAL FIX)
+    const { prisma } = require("@/lib/prisma");
+    const { openai } = require("@/lib/openai");
+    const { auth } = require("@/lib/auth");
+
     // 🔐 Auth check
     const session = await auth();
     if (!session?.user) {
@@ -55,7 +59,7 @@ export async function POST(req: NextRequest) {
     let reply = "";
     let correction = null;
 
-    // 🧪 MOCK MODE (for demo / resume)
+    // 🧪 MOCK MODE
     if (MOCK_MODE) {
       reply =
         "That's a great topic! Gold prices are rising due to inflation and global uncertainty. What do you think is driving it most?";
@@ -145,7 +149,6 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         console.error("OpenAI failed:", err);
 
-        // 🛟 FAIL-SAFE RESPONSE
         reply =
           "I'm having a small issue right now, but let's continue. Can you try saying that again in a different way?";
       }
