@@ -1,47 +1,30 @@
-import NextAuth from "next-auth";
+import NextAuth, { DefaultSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import { DefaultSession } from "next-auth";
 import type { NextAuthConfig } from "next-auth";
+import bcrypt from "bcryptjs";
 
+// ✅ SINGLE, CLEAN TYPE AUGMENTATION
 declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
       plan: string;
-    };
-  }
-}
-
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      plan?: string;
     } & DefaultSession["user"];
   }
 }
 
+// ✅ MAIN CONFIG
 const config: NextAuthConfig = {
-  // Required on Vercel — without this, auth() returns null because
-  // Vercel rewrites Host via x-forwarded-host which NextAuth rejects.
   trustHost: true,
 
-  // Adapter persists User + Account rows for Google OAuth.
-  // No conditional — it must be active in ALL environments including production.
   adapter: PrismaAdapter(prisma),
 
   session: {
-    // JWT strategy is required when using Credentials alongside an adapter.
-    // Database strategy silently breaks Credentials in NextAuth v5.
-    // Sessions live in an encrypted cookie — no DB read per request.
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   providers: [
@@ -56,6 +39,7 @@ const config: NextAuthConfig = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
+
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
@@ -72,11 +56,11 @@ const config: NextAuthConfig = {
 
         if (!user || !user.password) return null;
 
-        const bcrypt = require("bcryptjs");
         const valid = await bcrypt.compare(
           credentials.password as string,
           user.password,
         );
+
         if (!valid) return null;
 
         return {
@@ -90,37 +74,38 @@ const config: NextAuthConfig = {
   ],
 
   callbacks: {
-    // jwt runs on sign-in (user is populated) and on every session read.
-    // Embed id + plan into the token on first sign-in only.
     async jwt({ token, user, trigger }) {
+      // First login
       if (user) {
-        token.id = user.id!;
+        token.id = user.id as string;
+
         const dbUser = await prisma.user.findUnique({
-          where: { id: user.id! },
+          where: { id: user.id as string },
           select: { plan: true },
         });
+
         token.plan = dbUser?.plan ?? "FREE";
       }
 
-      // Re-sync plan from DB when client calls update() — e.g. after upgrade.
+      // Update trigger (plan refresh)
       if (trigger === "update" && token.id) {
         const dbUser = await prisma.user.findUnique({
-          where: { id: token.id },
+          where: { id: token.id as string },
           select: { plan: true },
         });
+
         token.plan = dbUser?.plan ?? token.plan ?? "FREE";
       }
 
       return token;
     },
 
-    // session runs on every auth() / useSession() call.
-    // With JWT strategy, read from token — NOT from user (user is undefined here).
     async session({ session, token }) {
-      if (session.user && token) {
-        session.user.id = token.id;
-        session.user.plan = token.plan ?? "FREE";
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.plan = (token.plan as string) ?? "FREE";
       }
+
       return session;
     },
   },
