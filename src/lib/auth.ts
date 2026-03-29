@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
+import { DefaultSession } from "next-auth";
 import type { NextAuthConfig } from "next-auth";
 
 declare module "next-auth" {
@@ -17,10 +18,12 @@ declare module "next-auth" {
   }
 }
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    plan: string;
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      plan?: string;
+    } & DefaultSession["user"];
   }
 }
 
